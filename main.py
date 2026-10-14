@@ -2,7 +2,7 @@
 import yfinance as yf
 
 from src.formatter import display_stock
-from src.stock_api import get_stock_info
+from src.stock_tool import get_stock_info
 
 from src.stock_repository import (
     save_stock,

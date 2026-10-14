@@ -1,6 +1,6 @@
 # tests/test_stock_api.py
 
-from src.stock_api import get_stock_info
+from src.stock_tool import get_stock_info
 
 
 def test_get_stock_info():
