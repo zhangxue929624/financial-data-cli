@@ -15,7 +15,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY")
                 , base_url=os.getenv("LLM_BASE_URL","https://api.deepseek.com")
 )
-  
+
 # ==========================================
 # 1. 用刚学的 Pydantic 定义参数模具，自动生成“工具说明书”
 # ==========================================
@@ -28,7 +28,7 @@ tools = [
         "function": {
             "name": "get_stock_info",
             "description": "获取指定股票的最新实时行情数据，包括当前价格、涨跌幅、成交量、最高价和最低价。",
-            # 利用 Pydantic 一键生成大模型能看懂的 JSON Schema 说明书！
+            # 利用 Pydantic 一键生成大模型能看懂的 JSON Schema 说明书！"
             "parameters": StockQueryParams.model_json_schema()
         }
     }
