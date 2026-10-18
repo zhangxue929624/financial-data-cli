@@ -1,12 +1,32 @@
 
 import os
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
 # 导入你封装好的股票查询工具
 from src.stock_tool import get_stock_info
 # 加载环境变量（读取 .env 中的 DEEPSEEK_API_KEY）
+
+import logging
+import time
+from uuid import uuid4
+
+from fastapi import HTTPException
+from pydantic import BaseModel, Field, field_validator
+from openai import (
+    APITimeoutError,
+    APIConnectionError,
+    APIStatusError,
+)
+
+from src.rag.answer import (
+    answer_question,
+    ModelOutputError,
+    ModelConfigurationError,
+)
+from src.rag.store import IndexUnavailableError
+
+
 load_dotenv()
 
 #  创建 FastAPI 总台实例
@@ -92,3 +112,105 @@ def analyze_stock_agent(request: ChatRequest):
             "status": "error",
             "message": f"AI 分析生成失败: {str(e)}"
         }
+
+logger = logging.getLogger(__name__)
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    company: str = Field(min_length=1, max_length=100)
+    report_period: str = Field(min_length=1, max_length=50)
+    top_k: int = Field(default=3, ge=1, le=10)
+
+    @field_validator("question", "company", "report_period")
+    @classmethod
+    def strip_and_check(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("不能只输入空白字符")
+
+        return value
+
+
+@app.post("/ask")
+def ask(request: AskRequest):
+    request_id = uuid4().hex
+    started = time.perf_counter()
+
+    try:
+        result = answer_question(
+            question=request.question,
+            company=request.company,
+            report_period=request.report_period,
+            top_k=request.top_k,
+        )
+
+        return {
+            "request_id": request_id,
+            "elapsed_seconds": round(
+                time.perf_counter() - started,
+                3,
+            ),
+            **result,
+        }
+
+    except APITimeoutError as exc:
+        logger.exception("模型超时 request_id=%s", request_id)
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "request_id": request_id,
+                "message": "模型响应超时，请稍后重试。",
+            },
+        ) from exc
+
+    except APIConnectionError as exc:
+        logger.exception("模型连接失败 request_id=%s", request_id)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "request_id": request_id,
+                "message": "无法连接模型服务。",
+            },
+        ) from exc
+
+    except APIStatusError as exc:
+        logger.exception("模型服务返回错误 request_id=%s", request_id)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "request_id": request_id,
+                "message": "模型服务调用失败，请检查服务状态与配置。",
+            },
+        ) from exc
+
+    except ModelOutputError as exc:
+        logger.exception("模型输出无效 request_id=%s", request_id)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "request_id": request_id,
+                "message": "模型返回的格式或引用无效。",
+            },
+        ) from exc
+
+    except (IndexUnavailableError, ModelConfigurationError) as exc:
+        logger.exception("服务未就绪 request_id=%s", request_id)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "request_id": request_id,
+                "message": "服务尚未准备好，请检查索引和模型配置。",
+            },
+        ) from exc
+
+    except Exception as exc:
+        logger.exception("未处理异常 request_id=%s", request_id)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "request_id": request_id,
+                "message": "内部处理失败，请根据请求编号检查日志。",
+            },
+        ) from exc

@@ -1,0 +1,29 @@
+[
+  {
+    "doc_id": "dian_2026q1_v1",
+    "file_name": "迪安诊断：2026年一季度报告.pdf",
+    "total_pages": 10,
+    "ok_pages": 10,
+    "empty_pages": 0,
+    "error_pages": 0,
+    "file_error": ""
+  },
+  {
+    "doc_id": "dian_2025q3_v1",
+    "file_name": "迪安诊断：2025年三季度报告.pdf",
+    "total_pages": 11,
+    "ok_pages": 11,
+    "empty_pages": 0,
+    "error_pages": 0,
+    "file_error": ""
+  },
+  {
+    "doc_id": "kunlun_2026q1_v1",
+    "file_name": "昆仑万维：2026年一季度报告.pdf",
+    "total_pages": 24,
+    "ok_pages": 24,
+    "empty_pages": 0,
+    "error_pages": 0,
+    "file_error": ""
+  }
+]
